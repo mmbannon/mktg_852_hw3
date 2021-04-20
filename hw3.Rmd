@@ -1,0 +1,46 @@
+---
+title: "hw3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, results = "hide", fig.width=8, fig.height=4)
+options(scipen = 0, digits = 3)  # controls base R output
+if(!require('pacman')) {install.packages('pacman')}
+pacman::p_load(bestglm, glmnet, leaps, car, tidyverse, pROC, ggplot2, caret, dplyr, dlookr, skimr, Hmisc, corrplot) # add the packages needed
+```
+
+#upload data
+```{r include=FALSE}
+hz_data <- read.csv("data/cust_survey_transaction.csv")
+```
+
+#summary statistics 
+
+```{r include=False}
+skim(hz_data)
+```
+```{r include=False}
+diagnose(hz_data)
+```
+
+histogram of dependent variable: recommend hertz
+```{r}
+histogram(hz_data$Recommend_Hertz)
+```
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+
+hz_data_numeric<- hz_data  %>% select_if(is.numeric) 
+
+hz_cor_table <- cor(hz_data_numeric, use = "complete.obs")
+
+corrplot(hz_cor_table, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+
+#hz_corr_2 <- rcorr(as.matrix(hz_data_numeric))
+#hz_corr_2$r
+#hz_corr_2$P
+
+```
+
