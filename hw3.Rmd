@@ -46,7 +46,7 @@ names(hz_data)
 # QUestion 1 Continuous Variable (Regression) 
 ```{r create dataset we want, message=FALSE, echo=FALSE, warning=FALSE}
 #create new variables
-hz_data_new<- hz_data %>% mutate(Time=hms::as.hms(Time),#recode Time as an hour variable
+hz_data_new<- hz_data %>% mutate(Time=hms::as_hms(Time),#recode Time as an hour variable
                                  time_mod=am(Time),
                                     time_mod=if_else(time_mod=="TRUE", "AM", "PM"), 
                                   Res_match=if_else(`xgra_vclass_reserv`==`xgra_veh_class`, "match", "no match"), #check match for reservation vs. assigned
@@ -66,7 +66,8 @@ hz_data_new<- hz_data %>% mutate(Time=hms::as.hms(Time),#recode Time as an hour 
                                  res_length=res_length+.01, 
                                  charge_per_day=Total_charge_USD/res_length, 
                                  quarter=quarter(xgra_ckot_ts, with_year=FALSE),
-                                 location_mod=if_else(addr_country=="US", "US", "Not US")) #calculate charge per day
+                                 location_mod=if_else(addr_country=="US", "US", "Not US")) %>% 
+                                  select(-Time)#calculate charge per day
 #refactor variables                 
 hz_data_new<- hz_data_new %>% mutate(Survey_Type=as.factor(Survey_Type), 
                                      Purpose_of_Rental=as.factor(Purpose_of_Rental),
@@ -89,7 +90,8 @@ hz_data_new<- hz_data_new %>% mutate(Survey_Type=as.factor(Survey_Type),
                                     quarter=as.factor(quarter),
                                     rent_area_loc=as.factor(rent_area_loc),
                                     location_mod=as.factor(location_mod), 
-                                    ga_region_desc=as.factor(ga_region_desc))
+                                    ga_region_desc=as.factor(ga_region_desc), 
+                                    Res_match=as.factor(Res_match))
 #Remove unnecessary variables
 hz_data_sub <- hz_data_new %>% select(-xgra_n1clb_nbr, 
                                       -Hertz_Rental_Number, 
@@ -108,7 +110,6 @@ hz_data_sub <- hz_data_new %>% select(-xgra_n1clb_nbr,
                                       -booking_channel_code, 
                                       -Total_charges,
                                       -reserve_date, 
-                                      -Time, 
                                       -col38_currency,
                                       -addr_country, 
                                       -rent_area_loc, #dropped because too specific %>% 
