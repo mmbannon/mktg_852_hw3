@@ -7,7 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = FALSE, results = "hide", fig.width=8, fig.height=4)
 options(scipen = 0, digits = 3)  # controls base R output
 if(!require('pacman')) {install.packages('pacman')}
-pacman::p_load(bestglm, glmnet, leaps, car, tidyverse, pROC, ggplot2, caret, dplyr, dlookr, skimr, Hmisc, corrplot) # add the packages needed
+pacman::p_load(bestglm, glmnet, leaps, car, tidyverse, pROC, ggplot2, caret, dplyr, dlookr, skimr, Hmisc, corrplot, lubridate) # add the packages needed
 ```
 
 #upload data
@@ -41,6 +41,119 @@ corrplot(hz_cor_table, type = "upper", order = "hclust",
 #hz_corr_2 <- rcorr(as.matrix(hz_data_numeric))
 #hz_corr_2$r
 #hz_corr_2$P
+names(hz_data)
+```
+# QUestion 1 Continuous Variable (Regression) 
+```{r create dataset we want, message=FALSE, echo=FALSE, warning=FALSE}
+#create new variables
+hz_data_new<- hz_data %>% mutate(Time=hms::as.hms(Time),#recode Time as an hour variable
+                                    Time_mod=if_else(Time<12:00, "AM", "PM"),#if else to classify time
+                                 Res_match=if_else(`xgra_vclass_reserv`==`xgra_veh_class`, "match", "no match"), #check match for reservation vs. assigned
+                                 rent_day_mod=case_when(rent_day ==1 ~ "weekend",  #recode date, assume 1, 6, 7 are weekend 
+                                                        rent_day == 2 ~ "weekday", 
+                                                        rent_day == 3 ~ "weekday", 
+                                                        rent_day == 4 ~ "weekday", 
+                                                        rent_day == 5 ~ "weekday", 
+                                                        rent_day == 6 ~ "weekend" , 
+                                                        rent_day == 7 ~ "weekend"), 
+                                 xgra_ckin_ts=parse_date_time(xgra_ckin_ts, orders=c("%m-%d-%y-", "%m%d%y%", "%m-%d-%y %H:%M"), exact= F), #recode string to date
+                                 xgra_ckot_ts=parse_date_time(xgra_ckot_ts, orders=c("%m-%d-%y-", "%m%d%y%", "%m-%d-%y %H:%M"), exact= F),
+                                 xgra_ckin_ts=as.Date(xgra_ckin_ts), #recode string to date
+                                 xgra_ckot_ts=as.Date(xgra_ckot_ts),
+                                 res_length=xgra_ckin_ts-xgra_ckot_ts,
+                                 res_length=as.integer(res_length),#recode to integer
+                                 res_length=res_length+.01, 
+                                 charge_per_day=Total_charge_USD/res_length) #calculate charge per day
+#refactor variables                 
+hz_data_new<- hz_data_new %>% mutate(Survey_Type=as.factor(Survey_Type), 
+                                     Purpose_of_Rental=as.factor(Purpose_of_Rental),
+                                     xgra_vclass_reserv=as.factor(xgra_vclass_reserv),
+                                     xgra_veh_class=as.factor(xgra_veh_class), 
+                                     rent_corp_lic=as.factor(rent_corp_lic),
+                                     rent_day=as.factor(rent_day), 
+                                     booking_channel_code=as.factor(booking_channel_code),
+                                     col38_currency=as.factor(col38_currency),
+                                     rent_loc_type=case_when(
+                                                        rent_loc_type  =="AP" ~ "AP", 
+                                                        rent_loc_type =="OFF AP" ~ "OFF AP", 
+                                                        rent_loc_type =="" ~"Other"), 
+                                     rent_loc_type=as.factor(rent_loc_type),
+                                    cust_tier_code=as.factor(cust_tier_code),
+                                    Time_mod=as.factor(Time_mod), 
+                                    addr_st_prov=as.factor(addr_st_prov),
+                                    addr_country=as.factor(addr_country), 
+                                    rent_day_mod=as.factor(rent_day_mod))
+#Remove unnecessary variables
+hz_data_sub <- hz_data_new %>% select(-xgra_n1clb_nbr, 
+                                      -Hertz_Rental_Number, 
+                                      -Date_of_Survey, 
+                                      -Day_of_Week_survey, 
+                                      -Survey_Type, 
+                                      -Area, 
+                                      -loc_nm, 
+                                      -xgra_ckot_ts,
+                                      -xgra_ckin_ts, 
+                                      -xgra_vclass_reserv, 
+                                      -xgra_veh_class, 
+                                      -rent_alpha_code, 
+                                      -rent_csr,
+                                      -rent_day, 
+                                      -booking_channel_code, 
+                                      -Total_charges,
+                                      -reserve_date, 
+                                      -Time) %>% drop_na()
+summary(hz_data_sub)
 
 ```
+
+
+```{r LASSO Linear regression, message=FALSE, echo=FALSE, warning=FALSE}
+#select test data
+N<-length(hz_data$Recommend_Hertz)
+  n1<-floor(.7*N)
+  n2<-floor(.3*N)
+idx_train<-sample(N,n1)
+idx_val<-(which(! seq (1:N) %in% idx_train))
+data.train<-hz_data_sub[idx_train,]
+data.val<-hz_data_sub[idx_val,]
+
+# extract y
+data.train<-data.train %>% drop_na()
+data.train<-data.train %>% relocate(Recommend_Hertz,.after=last_col())
+Y<-as.matrix(data.train[,23])
+
+#extract predictors
+X<-model.matrix(Recommend_Hertz~., data=data.train)[,-1]
+
+#use LASSO
+set.seed(1215)
+
+fit.fl.cv<-cv.glmnet(X, Y, alpha=1, nfolds=10, intercept=T) 
+plot(fit.fl.cv)
+  coef.use<-coef(fit.fl.cv, s="lambda.min") # change if needed 
+  coef.use<-coef.use[which(coef.use !=0),]
+  var.min<-rownames(as.matrix(coef.use))[-1]
+var.min
+
+```
+```{r relax lasso, message=FALSE, echo=FALSE, warning=FALSE}
+data.train.rl<-data.train[,c("Recommend_Hertz", var.min)]
+fit.relax<-lm(Recommend_Hertz~., data=data.train.rl)
+    summary(fit.relax)
+    Anova(fit.relax) 
+```
+
+
+````{r fine tune lasso, message=FALSE, echo=FALSE, warning=FALSE}
+fit.rl.exh<-regsubsets(Recommend_Hertz~., data=data.train.sub, nvmax=25, method="exhaustive")
+  plot(fit.rl.exh$cp
+  summary(fit.rl.exh)
+  ANova(fit.rl.exh) 
+
+
+```
+
+
+
+
 
