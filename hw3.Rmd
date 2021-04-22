@@ -203,12 +203,44 @@ stargazer::stargazer(fit.relax, lm.small, lm.full, title="Comparing Linear Regre
 
 
 ```{r apply final model to validation data, messagage=FALSE, warning=FALSE, echo=FALSE}
-lm.final<-lm(Recommend_Hertz~Staff_Courtesy+ Speed_of_Service+ Veh_Equip_Condition+Trans_Billing_as_Expected+Value_for_the_Money, data=data.val) 
+#data train
+lasso<-predict(fit.relax, data.train)
+  lasso.rmse<-RMSE(lasso, data.train$Recommend_Hertz)
+full<-predict(lm.full, data.train)
+  full.rmse<-RMSE(full, data.train$Recommend_Hertz)
+reduced<-predict(lm.full, data.train)
+  reduced.rmse<-RMSE(reduced, data.train$Recommend_Hertz)
+compare<-data.frame(full.rmse, reduced.rmse, lasso.rmse)
+  rownames(compare)<-"train"
+#data validate
+lasso2<-predict(fit.relax, data.val)
+  lasso.rmse2<-RMSE(lasso2, data.val$Recommend_Hertz)
+full2<-predict(lm.full, data.val)
+  full.rmse2<-RMSE(full2, data.val$Recommend_Hertz)
+reduced2<-predict(lm.full, data.val)
+  reduced.rmse2<-RMSE(reduced2, data.val$Recommend_Hertz)
+compare2<-data.frame(full.rmse2, reduced.rmse2, lasso.rmse2)
+  colnames(compare2)<-c("full.rmse", "reduced.rmse", "lasso.rmse")
+  rownames(compare2)<-"validation"
+  
+compare<-rbind(compare, compare2)
+compare
+
+```
+```{r final model, message=FALSE, echo=FALSE, message=FALSE}
+
+lm.final<-lm(Recommend_Hertz~Staff_Courtesy + Speed_of_Service + Veh_Equip_Condition + Trans_Billing_as_Expected + 
+Value_for_the_Money, data=data.val )
+
 summary(lm.final)
 Anova(lm.final)
 vif(lm.final)
 plot(lm.final)
+
+
 ```
+
+
 
 ```{r stargaze final validation, message=FALSE, warning=FALSE, echo=FALSE, results='asis'}
 stargazer::stargazer(lm.final, fit.relax, title="Final Model on Validation Data vs. Testing Data", type="html", column.labels=c("Validation", "Test"))
