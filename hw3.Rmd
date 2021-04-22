@@ -225,12 +225,11 @@ compare2<-data.frame(full.rmse2, reduced.rmse2, lasso.rmse2)
   
 compare<-rbind(compare, compare2)
 compare
-
 ```
 ```{r final model, message=FALSE, echo=FALSE, message=FALSE}
 
 lm.final<-lm(Recommend_Hertz~Staff_Courtesy + Speed_of_Service + Veh_Equip_Condition + Trans_Billing_as_Expected + 
-Value_for_the_Money, data=data.val )
+Value_for_the_Money, data=data.train )
 
 summary(lm.final)
 Anova(lm.final)
