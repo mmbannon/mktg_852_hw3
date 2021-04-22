@@ -237,9 +237,3 @@ plot(lm.final)
 
 
 ```
-
-
-
-```{r stargaze final validation, message=FALSE, warning=FALSE, echo=FALSE, results='asis'}
-stargazer::stargazer(lm.final, fit.relax, title="Final Model on Validation Data vs. Testing Data", type="html", column.labels=c("Validation", "Test"))
-```
