@@ -46,9 +46,9 @@ names(hz_data)
 # QUestion 1 Continuous Variable (Regression) 
 ```{r create dataset we want, message=FALSE, echo=FALSE, warning=FALSE}
 #create new variables
-hz_data_new<- hz_data %>% mutate(Time=hms::as_hms(Time),#recode Time as an hour variable
+hz_data_new<- hz_data %>% mutate(Time=lubridate::hms(Time),#recode Time as an hour variable
                                  time_mod=am(Time),
-                                    time_mod=if_else(time_mod=="TRUE", "AM", "PM"), 
+                                 time_mod=if_else(time_mod=="TRUE", "AM", "PM"), 
                                   Res_match=if_else(`xgra_vclass_reserv`==`xgra_veh_class`, "match", "no match"), #check match for reservation vs. assigned
                                  rent_day_mod=case_when(rent_day ==1 ~ "weekend",  #recode date, assume 1, 6, 7 are weekend 
                                                         rent_day == 2 ~ "weekday", 
