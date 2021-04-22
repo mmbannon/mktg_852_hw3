@@ -228,8 +228,7 @@ compare
 ```
 ```{r final model, message=FALSE, echo=FALSE, message=FALSE}
 
-lm.final<-lm(Recommend_Hertz~Staff_Courtesy + Speed_of_Service + Veh_Equip_Condition + Trans_Billing_as_Expected + 
-Value_for_the_Money, data=data.train )
+lm.final<-fit.relax
 
 summary(lm.final)
 Anova(lm.final)
