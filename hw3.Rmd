@@ -166,7 +166,7 @@ Y<-as.matrix(data.train[,21])
 X<-model.matrix(Recommend_Hertz~., data=data.train)[,-1]
 
 #use LASSO
-set.seed(1215)
+set.seed(12)
 
 fit.fl.cv<-cv.glmnet(X, Y, alpha=1, nfolds=10, intercept=T) 
 plot(fit.fl.cv)
@@ -187,6 +187,7 @@ fit.relax<-lm(Recommend_Hertz~., data=data.train.rl)
     Anova(fit.relax) 
     vif(fit.relax)
 ```
+
 ```{r compare training models linear, message=FALSE, echo=FALSE, warning=FALSE}
 summary(lm.full)
 summary(lm.small)
@@ -196,7 +197,7 @@ summary(fit.relax)
 
 ```{r compare linear models, message=FALSE, echo=FALSE, warning=FALSE, results='asis'}
 p_load(stargazer)
-stargazer::stargazer(fit.relax, lm.small, lm.full, title="Comparing Linear Regression Models in Training Data", type="html")
+stargazer::stargazer(fit.relax, lm.small, lm.full, title="Comparing Linear Regression Models in Training Data", type="html", column.labels=c("Lasso", "Backward Selection", "All"))
 ```
 
 
@@ -208,3 +209,6 @@ vif(lm.final)
 plot(lm.final)
 ```
 
+```{r stargaze final validation, message=FALSE, warning=FALSE, echo=FALSE, results='asis'}
+stargazer::stargazer(lm.final, fit.relax, title="Final Model on Validation Data vs. Testing Data", type="html", column.labels=c("Validation", "Test"))
+```
