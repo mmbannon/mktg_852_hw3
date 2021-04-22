@@ -44,7 +44,7 @@ corrplot(hz_cor_table, type = "upper", order = "hclust",
 names(hz_data)
 ```
 # QUestion 1 Continuous Variable (Regression) 
-```{r create dataset we want, message=FALSE, echo=FALSE, warning=FALSE}
+```{r create dataset we want, message=FALSE, echo=FALSE, warning=FALSE, include=FALSE, eval=FALSE}
 #create new variables
 hz_data_new<- hz_data %>% mutate(Time=lubridate::hms(Time),#recode Time as an hour variable
                                  time_mod=am(Time),
@@ -119,11 +119,12 @@ hz_data_sub <- hz_data_new %>% select(-xgra_n1clb_nbr,
 
 summary(hz_data_sub)
 write_csv(hz_data_sub, "data/clean_data.csv")
-
+saveRDS(hz_data_sub, file="data/hz_data_sub.rds")
 ```
 
 
-```{r split data, message=FALSE, echo=FALSE, warning=FALSE}
+```{r split data, echo=FALSE, message=FALSE, warning=FALSE}
+hz_data_sub<-readRDS("data/hz_data_sub.rds")
 #select test data
 set.seed(1215)
 N<-length(hz_data_sub$Recommend_Hertz)
