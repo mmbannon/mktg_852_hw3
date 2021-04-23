@@ -7,12 +7,13 @@ output: html_document
 knitr::opts_chunk$set(echo = FALSE, results = "hide", fig.width=8, fig.height=4)
 options(scipen = 0, digits = 3)  # controls base R output
 if(!require('pacman')) {install.packages('pacman')}
-pacman::p_load(bestglm, glmnet, leaps, car, tidyverse, pROC, ggplot2, caret, dplyr, dlookr, skimr, Hmisc, corrplot, lubridate) # add the packages needed
+pacman::p_load(bestglm, glmnet, leaps, car, tidyverse, pROC, ggplot2, caret, dplyr, dlookr, skimr, Hmisc, corrplot, lubridate, ggiraphExtra, plyr) # add the packages needed
 ```
 
 #upload data
 ```{r include=FALSE}
 hz_data <- read.csv("data/cust_survey_transaction.csv")
+
 ```
 
 #summary statistics 
@@ -50,7 +51,7 @@ hz_data_new<- hz_data %>% mutate(Time=lubridate::hms(Time),#recode Time as an ho
                                  time_mod=am(Time),
                                  time_mod=if_else(time_mod=="TRUE", "AM", "PM"), 
                                   Res_match=if_else(`xgra_vclass_reserv`==`xgra_veh_class`, "match", "no match"), #check match for reservation vs. assigned
-                                 rent_day_mod=case_when(rent_day ==1 ~ "weekend",  #recode date, assume 1, 6, 7 are weekend 
+                                 rent_day_mod=case_when(rent_day == 1 ~ "weekend",  #recode date, assume 1, 6, 7 are weekend 
                                                         rent_day == 2 ~ "weekday", 
                                                         rent_day == 3 ~ "weekday", 
                                                         rent_day == 4 ~ "weekday", 
@@ -67,7 +68,7 @@ hz_data_new<- hz_data %>% mutate(Time=lubridate::hms(Time),#recode Time as an ho
                                  charge_per_day=Total_charge_USD/res_length, 
                                  quarter=quarter(xgra_ckot_ts, with_year=FALSE),
                                  location_mod=if_else(addr_country=="US", "US", "Not US")) %>% 
-                                  select(-Time)#calculate charge per day
+                                 select(-Time)#calculate charge per day
 #refactor variables                 
 hz_data_new<- hz_data_new %>% mutate(Survey_Type=as.factor(Survey_Type), 
                                      Purpose_of_Rental=as.factor(Purpose_of_Rental),
@@ -237,3 +238,89 @@ plot(lm.final)
 
 
 ```
+
+#Segment EDA
+```{r}
+
+#Create tier variable 
+data.train <- data.train %>% mutate(
+  tier=if_else(cust_tier_code=="RG", "Basic", "Basic+"), 
+)
+
+```
+
+#Segments 
+```{r}
+
+#Airport vs. Off-Airport
+hz_data_airport <- data.train %>% filter(rent_loc_type=="AP")
+hz_data_off_airport <- data.train %>% filter(rent_loc_type=="OFF AP")
+
+summary(hz_data_airport$Recommend_Hertz)
+summary(hz_data_off_airport$Recommend_Hertz)
+histogram(hz_data_airport$Recommend_Hertz)
+histogram(hz_data_off_airport$Recommend_Hertz)
+
+#Business vs. Leisure vs. Loaner 
+hz_data_biz <- data.train %>% filter(Purpose_of_Rental=="Business")
+hz_data_personal <- data.train %>% filter(Purpose_of_Rental=="Personal")
+hz_data_loan <- data.train %>% filter(Purpose_of_Rental=="Loaner")
+
+summary(hz_data_biz$Recommend_Hertz)
+summary(hz_data_personal$Recommend_Hertz)
+histogram(hz_data_biz$Recommend_Hertz)
+histogram(hz_data_personal$Recommend_Hertz)
+
+#Channel 
+hz_data_online <- data.train %>% filter(booking_channel_dummy==1)
+hz_data_other <- data.train %>% filter(booking_channel_dummy==0)
+
+summary(hz_data_online$Recommend_Hertz)
+summary(hz_data_other$Recommend_Hertz)
+histogram(hz_data_biz$Recommend_Hertz)
+histogram(hz_data_personal$Recommend_Hertz)
+
+#Customer tier
+hz_data_basic <- data.train %>% filter(tier=="Basic")
+hz_data_basic_plus <- data.train %>% filter(tier=="Basic+")
+
+summary(hz_data_basic$Recommend_Hertz)
+summary(hz_data_basic_plus$Recommend_Hertz)
+histogram(hz_data_basic$Recommend_Hertz)
+histogram(hz_data_basic_plus$Recommend_Hertz)
+
+```
+
+
+#Models with segments 
+```{r}
+
+#Airport vs. Off-Airport
+model_airport <- lm(Recommend_Hertz ~ Staff_Courtesy + Speed_of_Service + Veh_Equip_Condition + Trans_Billing_as_Expected + Value_for_the_Money, data=hz_data_airport)
+model_off_airport <- lm(Recommend_Hertz ~ Staff_Courtesy + Speed_of_Service + Veh_Equip_Condition + Trans_Billing_as_Expected + Value_for_the_Money, data=hz_data_off_airport)
+
+#Business vs. Leisure vs. Loaner
+model_biz <- lm(Recommend_Hertz ~ Staff_Courtesy + Speed_of_Service + Veh_Equip_Condition + Trans_Billing_as_Expected + Value_for_the_Money, data=hz_data_biz)
+model_personal <- lm(Recommend_Hertz ~ Staff_Courtesy + Speed_of_Service + Veh_Equip_Condition + Trans_Billing_as_Expected + Value_for_the_Money, data=hz_data_personal)
+model_loan <- lm(Recommend_Hertz ~ Staff_Courtesy + Speed_of_Service + Veh_Equip_Condition + Trans_Billing_as_Expected + Value_for_the_Money, data=hz_data_loan)
+
+#Channel
+model_online <- lm(Recommend_Hertz ~ Staff_Courtesy + Speed_of_Service + Veh_Equip_Condition + Trans_Billing_as_Expected + Value_for_the_Money, data=hz_data_online)
+model_other <- lm(Recommend_Hertz ~ Staff_Courtesy + Speed_of_Service + Veh_Equip_Condition + Trans_Billing_as_Expected + Value_for_the_Money, data=hz_data_other)
+
+#Tier
+model_basic <- lm(Recommend_Hertz ~ Staff_Courtesy + Speed_of_Service + Veh_Equip_Condition + Trans_Billing_as_Expected + Value_for_the_Money, data=hz_data_basic)
+model_basic_plus <- lm(Recommend_Hertz ~ Staff_Courtesy + Speed_of_Service + Veh_Equip_Condition + Trans_Billing_as_Expected + Value_for_the_Money, data=hz_data_basic_plus)
+
+summary(model_airport)
+summary(model_off_airport)
+summary(model_biz)
+summary(model_personal)
+summary(model_loan)
+summary(model_online)
+summary(model_other)
+summary(model_basic)
+summary(model_basic_plus)
+
+```
+
