@@ -324,3 +324,51 @@ summary(model_basic_plus)
 
 ```
 
+## Question 3
+```{r, echo = FALSE}
+head(data.train.rl,5)
+mean(hz_data$Recommend_Hertz)
+hz_data$Recommend_Hertz_binary <- if_else(hz_data$Recommend_Hertz >=mean(hz_data$Recommend_Hertz), "1", "0" )
+head(hz_data,5)
+set.seed(1215)
+sample <- sample.int(n = nrow(hz_data), size = floor(.70*nrow(hz_data)), replace = F)
+train_logit <- hz_data[sample, ]
+test_logit  <- hz_data[-sample, ]
+dim(train_logit)
+dim(test_logit)
+
+model_logit <- glm(Recommend_Hertz_binary ~ Staff_Courtesy + Speed_of_Service + Veh_Equip_Condition + Trans_Billing_as_Expected + Value_for_the_Money, family = "binomial", data = train_logit)
+summary(model_logit)
+
+## Out of sample hit rate
+
+model_logit.testpred <- predict(model_logit, test_logit, type="response")
+
+model_logit.testpred <- data.frame(model_logit.testpred)
+head(model_logit.testpred,5)
+
+fit.pred <- ifelse(model_logit.testpred$model_logit.testpred > 1/2, "1", "0")
+
+output1 <- data.frame(test_logit$Recommend_Hertz_binary, fit.pred, model_logit.testpred$model_logit.testpred)
+
+head(output1)
+output1$test_logit.Recommend_Hertz_binary <- as.factor(output1$test_logit.Recommend_Hertz_binary)
+cm_logit<- table(output1$fit.pred, output1$test_logit.Recommend_Hertz_binary)
+cm_logit
+
+## In sample hit rate
+model_logit.trainpred <- predict(model_logit, train_logit, type="response")
+
+model_logit.trainpred<- data.frame(model_logit.trainpred)
+#head(model_logit.trainpred,5)
+
+fit.pred <- ifelse(model_logit.trainpred$model_logit.trainpred > 1/2, "1", "0")
+
+output2 <- data.frame(train_logit$Recommend_Hertz_binary, fit.pred, model_logit.trainpred$model_logit.trainpred)
+
+head(output2)
+output2$train_logit.Recommend_Hertz_binary <- as.factor(output2$train_logit.Recommend_Hertz_binary)
+cm_train_logit<- table(output2$fit.pred, output2$train_logit.Recommend_Hertz_binary)
+cm_train_logit
+
+```
