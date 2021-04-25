@@ -372,3 +372,51 @@ cm_train_logit<- table(output2$fit.pred, output2$train_logit.Recommend_Hertz_bin
 cm_train_logit
 
 ```
+
+#Question 4
+```{r}
+
+set.seed(1215)
+
+sample <- sample.int(n = nrow(hz_data), size = floor(.70*nrow(hz_data)), replace = F)
+train_poisson <- hz_data[sample, ]
+test_poisson <- hz_data[-sample, ]
+
+dim(train_poisson)
+dim(test_poisson)
+
+model_poisson <- glm(Recommend_Hertz ~ Staff_Courtesy + Speed_of_Service + Veh_Equip_Condition + Trans_Billing_as_Expected + Value_for_the_Money, family = "poisson", data = train_poisson)
+
+summary(model_poisson)
+
+
+## Regression model comparison
+model_regression <- glm(Recommend_Hertz ~ Staff_Courtesy + Speed_of_Service + Veh_Equip_Condition + Trans_Billing_as_Expected + Value_for_the_Money, data = train_poisson)
+
+summary(model_regression)
+
+
+## Out of sample predictions - Poisson
+model_poisson.testpred <- predict(model_poisson, test_poisson, type="response")
+model_poisson.testpred <- data.frame(model_poisson.testpred)
+
+output2 <- data.frame(test_poisson$Recommend_Hertz, model_poisson.testpred$model_poisson.testpred)
+output2 <- drop_na(output2)
+output2$sq_errors <- (output2$test_poisson.Recommend_Hertz - output2$model_poisson.testpred.model_poisson.testpred) ^ 2
+mse_poisson <- sum(output2$sq_errors)
+mse_poisson <- sum(output2$sq_errors) / nrow(output2)
+mse_poisson
+
+
+## Out of sample predictions - Regression
+model_regression.testpred <- predict(model_regression, test_poisson, type="response")
+model_regression.testpred <- data.frame(model_regression.testpred)
+
+output3 <- data.frame(test_poisson$Recommend_Hertz, model_regression.testpred$model_regression.testpred)
+output3 <- drop_na(output3)
+output3$sq_errors <- (output3$test_poisson.Recommend_Hertz - output3$model_regression.testpred.model_regression.testpred) ^ 2
+mse_regression <- sum(output3$sq_errors)
+mse_regression <- sum(output3$sq_errors) / nrow(output3)
+mse_regression
+
+```
